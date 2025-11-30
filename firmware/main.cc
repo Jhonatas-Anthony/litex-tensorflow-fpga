@@ -11,8 +11,8 @@ extern "C" {
 // #include "tflm/tensorflow/lite/schema/schema_generated.h"
 // #include "tflm/examples/hello_world/models/hello_world_int8_model_data.h"
 
-static const int arena_size = 3024;
-static uint8_t arena[arena_size];
+// static const int arena_size = 3024;
+// static uint8_t arena[arena_size];
 
 extern "C" void isr(void) {}
 

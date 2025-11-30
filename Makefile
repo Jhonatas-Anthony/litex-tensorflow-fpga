@@ -10,10 +10,16 @@ TFLM = tflm
 include $(BUILD_DIR)/software/include/generated/variables.mak
 include $(SOC_DIRECTORY)/software/common.mak
 
-CX = riscv64-unknown-elf-g++
-CC = riscv64-unknown-elf-gcc
+# Toolchain override
+CX = riscv-none-elf-g++
+CC = riscv-none-elf-gcc
 
-# TFLM defines (must match library build)
+# ------------------------------------------------------------
+# *** IMPORTANTE ***
+# Removidos filtros que  estavam quebrando o runtime newlib
+# ------------------------------------------------------------
+
+# TFLM defines
 TFLM_DEFINES = -DTF_LITE_STATIC_MEMORY -DTF_LITE_DISABLE_X86_NEON
 TFLM_DEFINES += -DGEMMLOWP_ALLOW_SLOW_SCALAR_FALLBACK
 TFLM_DEFINES += -DTF_LITE_USE_GLOBAL_CMATH_FUNCTIONS
@@ -23,26 +29,30 @@ TFLM_DEFINES += -DTF_LITE_USE_GLOBAL_MAX -DTF_LITE_USE_GLOBAL_MIN
 TFLM_INCLUDES = -I$(TFLM) -I$(TFLM)/third_party/flatbuffers/include
 TFLM_INCLUDES += -I$(TFLM)/third_party/gemmlowp -I$(TFLM)/third_party/ruy
 
-# Application flags (uses LiteX CPUFLAGS)
+# Application flags
 APP_FLAGS = $(CPUFLAGS) -Os -g -std=c++17
 APP_FLAGS += -fno-rtti -fno-exceptions -ffunction-sections -fdata-sections -Wall
-APP_FLAGS += -I. -I$(BUILDINC_DIRECTORY) -I$(BUILDINC_DIRECTORY)/../libc
+APP_FLAGS += -I. -I$(BUILDINC_DIRECTORY)
 APP_FLAGS += -I$(SOC_DIRECTORY)/software/include -I$(SOC_DIRECTORY)/software/libbase
 APP_FLAGS += -I$(CPU_DIRECTORY) -Iplatform
 APP_FLAGS += $(TFLM_INCLUDES) $(TFLM_DEFINES)
 
 # Sources
-PLATFORM_SOURCES = platform/sbrk.c
-APP_SOURCES = main.cc models/model.cc
-# APP_SOURCES = main.cc tflm/examples/hello_world/models/hello_world_int8_model_data.cc
+APP_SOURCES = main.cc tflm/examples/hello_world/models/hello_world_int8_model_data.cc
+PLATFORM_C_SOURCES = platform/sbrk.c
 
 # Objects
-PLATFORM_OBJECTS = $(patsubst %.cc,$(OUT)/%.o,$(PLATFORM_SOURCES))
 APP_OBJECTS = $(patsubst %.cc,$(OUT)/%.o,$(APP_SOURCES))
-OBJECTS = $(OUT)/crt0.o $(APP_OBJECTS) $(PLATFORM_OBJECTS)
+PLATFORM_C_OBJECTS = $(patsubst %.c,$(OUT)/%.o,$(PLATFORM_C_SOURCES))
+OBJECTS = $(OUT)/crt0.o $(APP_OBJECTS) $(PLATFORM_C_OBJECTS)
 
 # Pre-built TFLM library
 TFLM_LIB = $(TFLM)/build/libtflm.a
+
+# ------------------------------------------------------------
+# libs CORRETAS para LiteX + newlib + C++
+# ------------------------------------------------------------
+STD_LIBS = -lstdc++ -lc -lm -lgcc
 
 # Build
 all: $(OUT)/main.bin
@@ -52,10 +62,10 @@ $(OUT)/main.bin: $(OUT)/main.elf
 	@echo "Firmware ready: $@"
 
 $(OUT)/main.elf: $(OBJECTS) $(TFLM_LIB)
-	$(CC) $(LDFLAGS) -T linker.ld -N \
+	$(CX) $(LDFLAGS) -T linker.ld -N \
 		-Wl,--start-group $^ \
 		$(PACKAGES:%=-L$(BUILD_DIR)/software/%) \
-		$(LIBS:lib%=-l%) -lstdc++ -lc -lm -lgcc \
+		$(LIBS:lib%=-l%) $(STD_LIBS) \
 		-Wl,--end-group \
 		-Wl,--gc-sections -Wl,--allow-multiple-definition \
 		-Wl,-Map,$@.map -o $@
