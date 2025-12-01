@@ -33,8 +33,8 @@ APP_FLAGS += $(TFLM_INCLUDES) $(TFLM_DEFINES)
 
 # Sources
 PLATFORM_SOURCES = platform/sbrk.c
-APP_SOURCES = main.cc models/model.cc
-# APP_SOURCES = main.cc tflm/examples/hello_world/models/hello_world_int8_model_data.cc
+# APP_SOURCES = main.cc models/model.cc
+APP_SOURCES = main.cc tflm/examples/hello_world/models/hello_world_int8_model_data.cc models/model_int8.cc
 
 # Objects
 PLATFORM_OBJECTS = $(patsubst %.cc,$(OUT)/%.o,$(PLATFORM_SOURCES))
